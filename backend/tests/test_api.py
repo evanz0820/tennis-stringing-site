@@ -186,6 +186,19 @@ def test_info_includes_turnaround_note():
     assert body["turnaround_note"]
 
 
+def test_public_queue_count(customer, stringer):
+    # Public endpoint, no auth needed.
+    assert client.get("/queue").json()["active_count"] == 0
+    make_job(customer["access_token"], racquet="A")
+    make_job(customer["access_token"], racquet="B")
+    assert client.get("/queue").json()["active_count"] == 2
+    # Completing one drops it out of the active queue.
+    job = client.get("/jobs", headers=auth_header(stringer["access_token"])).json()[0]
+    client.patch(f"/jobs/{job['id']}", json={"status": "completed"},
+                 headers=auth_header(stringer["access_token"]))
+    assert client.get("/queue").json()["active_count"] == 1
+
+
 def test_racquet_catalog_available():
     resp = client.get("/racquets")
     assert resp.status_code == 200

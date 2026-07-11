@@ -197,6 +197,27 @@ input:focus, select:focus, textarea:focus {
   max-width: 30ch;
   margin: 0 0 26px;
 }
+.hero-queue {
+  display: inline-flex; align-items: center; gap: 8px;
+  margin: 14px 0 0;
+  font-size: 0.9rem; font-weight: 600; color: var(--brand-dark);
+}
+.live-dot {
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--brand); box-shadow: 0 0 0 0 rgba(31, 122, 61, 0.5);
+  animation: livePulse 1.8s ease-out infinite;
+}
+@keyframes livePulse {
+  0% { box-shadow: 0 0 0 0 rgba(31, 122, 61, 0.5); }
+  100% { box-shadow: 0 0 0 8px rgba(31, 122, 61, 0); }
+}
+
+/* Informational queue chip in the customer top bar. */
+.queue-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 0.82rem; font-weight: 600; color: var(--muted);
+}
+
 .hero-cta { display: flex; flex-wrap: wrap; gap: 12px; }
 .btn.big { padding: 13px 22px; font-size: 1rem; border-radius: 10px; }
 .hero-hours { margin-top: 22px; color: var(--muted); font-size: 0.9rem; }
@@ -528,4 +549,5 @@ input:focus, select:focus, textarea:focus {
   .ball-shadow { animation: none; opacity: 0.35; }
   .court-glow { animation: none; }
   .hero-copy > * { opacity: 1; animation: none; }
+  .live-dot { animation: none; }
 }

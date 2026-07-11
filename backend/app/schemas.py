@@ -107,3 +107,8 @@ class InfoOut(BaseModel):
     close_time: str
     slot_minutes: int
     turnaround_note: str
+
+
+class QueueOut(BaseModel):
+    # Count only — no customer details, so it's safe to show publicly.
+    active_count: int

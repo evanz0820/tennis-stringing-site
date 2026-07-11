@@ -26,15 +26,14 @@ class Settings(BaseSettings):
     # stringer. Empty ("") disables stringer sign-up entirely.
     STRINGER_SIGNUP_CODE: str = ""
 
-    # --- Email (Gmail SMTP) --------------------------------------------------
-    # Set SMTP_USER (your Gmail) + SMTP_PASSWORD (a Gmail App Password) to enable
-    # sending. If either is empty, email is disabled and messages are logged
-    # instead (so dev/tests never block on SMTP).
-    SMTP_HOST: str = "smtp.gmail.com"
-    SMTP_PORT: int = 587
-    SMTP_USER: str = ""
-    SMTP_PASSWORD: str = ""
-    EMAIL_FROM: str = ""  # display From; defaults to SMTP_USER when empty
+    # --- Email (Resend) ------------------------------------------------------
+    # Set RESEND_API_KEY to enable sending. If empty, email is disabled and
+    # messages are logged instead (so dev/tests never block on email).
+    # EMAIL_FROM must be from a domain you've verified in Resend; the
+    # onboarding@resend.dev default only delivers to your own Resend account
+    # email (fine for testing).
+    RESEND_API_KEY: str = ""
+    EMAIL_FROM: str = "Strings by Evan <onboarding@resend.dev>"
     VERIFICATION_TTL_MINUTES: int = 15
 
     # Public URL of the app, used in email links.

@@ -48,6 +48,7 @@ async function request(path, { method = 'GET', body, auth = true } = {}) {
 export const api = {
   info: () => request('/info', { auth: false }),
   racquets: () => request('/racquets', { auth: false }),
+  queue: () => request('/queue', { auth: false }),
   register: (payload) => request('/auth/register', { method: 'POST', body: payload, auth: false }),
   verifyEmail: (payload) => request('/auth/verify', { method: 'POST', body: payload, auth: false }),
   resendCode: (payload) => request('/auth/resend', { method: 'POST', body: payload, auth: false }),

@@ -1,8 +1,11 @@
 """Public shop info: open hours, slot size, and the turnaround note (Task 3)."""
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
 
 from .. import schemas
 from ..config import settings
+from ..database import get_db
+from ..models import ACTIVE_STATUSES, StringingJob
 from ..racquets import RACQUETS
 
 router = APIRouter(tags=["info"])
@@ -22,3 +25,15 @@ def get_info():
 def get_racquets():
     """Curated catalog for the request dropdown. Public; no auth needed."""
     return RACQUETS
+
+
+@router.get("/queue", response_model=schemas.QueueOut)
+def get_queue(db: Session = Depends(get_db)):
+    """How many racquets are actively in the shop queue. Count only (no customer
+    details), so it's public — shown on the hero page and to customers."""
+    count = (
+        db.query(StringingJob)
+        .filter(StringingJob.status.in_(ACTIVE_STATUSES))
+        .count()
+    )
+    return schemas.QueueOut(active_count=count)

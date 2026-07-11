@@ -130,8 +130,8 @@ All are optional in dev (sensible defaults in `app/config.py`). Set these in pro
 | `DATABASE_URL` | `sqlite:///./dev.db` | DB connection. Use a Postgres URL in prod. `postgres://` is normalized to `postgresql://`. |
 | `SECRET_KEY` | `dev-secret-change-me` | JWT signing key. **Change in prod.** |
 | `STRINGER_SIGNUP_CODE` | `""` (off) | Secret code required to register a stringer. Public sign-up is always a customer; only someone with this code can create a stringer account. |
-| `SMTP_USER` / `SMTP_PASSWORD` | `""` (off) | Gmail address + [App Password](https://support.google.com/accounts/answer/185833) for sending. If unset, email is disabled and codes/notices are logged (dev). |
-| `EMAIL_FROM` | `SMTP_USER` | From header, e.g. `Strings by Evan <you@gmail.com>`. |
+| `RESEND_API_KEY` | `""` (off) | [Resend](https://resend.com) API key for sending email. If unset, email is disabled and codes/notices are logged (dev). |
+| `EMAIL_FROM` | `Strings by Evan <onboarding@resend.dev>` | From header. Must be a Resend-verified domain to email arbitrary customers; the default only reaches your own Resend account email. |
 | `APP_BASE_URL` | `http://localhost:5173` | Public app URL used in email links. Set to your Vercel URL in prod. |
 | `VERIFICATION_TTL_MINUTES` | `15` | How long an email verification code is valid. |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | `1440` | Token lifetime. |

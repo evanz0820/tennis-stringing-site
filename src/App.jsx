@@ -131,6 +131,10 @@ export default function App() {
 // ---- Landing / hero --------------------------------------------------------
 function Landing({ info, onStart }) {
   const hours = info ? `${info.open_time}–${info.close_time}` : null
+  const [queue, setQueue] = useState(null)
+  useEffect(() => {
+    api.queue().then(setQueue).catch(() => {})
+  }, [])
   return (
     <div className="landing">
       <nav className="landing-nav">
@@ -144,6 +148,12 @@ function Landing({ info, onStart }) {
       <header className="hero">
         <div className="hero-copy">
           <span className="hero-eyebrow">Local racquet stringing</span>
+          {queue && (
+            <div className="hero-queue" title="Racquets currently being worked on">
+              <span className="live-dot" />
+              {queue.active_count} racquet{queue.active_count === 1 ? '' : 's'} in the queue right now
+            </div>
+          )}
           <h1 className="hero-title">Fresh strings,<br />ready to play.</h1>
           <p className="hero-sub">
             Pro stringing dialed to your exact tension. Drop off your racquet, pick your
@@ -460,10 +470,12 @@ function ReadyRow({ job, info, onConfirm }) {
 // ---- Customer --------------------------------------------------------------
 function CustomerView({ user, info, onLogout }) {
   const [jobs, setJobs] = useState([])
+  const [queueCount, setQueueCount] = useState(null)
   const [confirmation, setConfirmation] = useState(null)
 
   const load = useCallback(() => {
     api.listJobs().then(setJobs).catch(() => {})
+    api.queue().then((q) => setQueueCount(q.active_count)).catch(() => {})
   }, [])
   useEffect(() => { load() }, [load])
   // Light polling so a "ready for pickup" alert shows up without a manual reload.
@@ -484,7 +496,16 @@ function CustomerView({ user, info, onLogout }) {
 
   return (
     <div className="app">
-      <TopBar title="🎾 My Racquets" user={user} onLogout={onLogout} />
+      <TopBar
+        title="🎾 My Racquets"
+        user={user}
+        onLogout={onLogout}
+        right={queueCount != null && (
+          <span className="queue-pill" title="Racquets currently in the shop queue">
+            Queue <span className="queue-count">{queueCount}</span>
+          </span>
+        )}
+      />
 
       {/* Drop-off banner — carries the turnaround expectation (Task 3). */}
       {info && (
