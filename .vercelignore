@@ -3,6 +3,6 @@ backend/dev.db
 backend/.env
 **/__pycache__
 **/*.pyc
-frontend/node_modules
-frontend/dist
+node_modules
+dist
 backend/tests
