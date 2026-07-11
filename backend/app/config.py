@@ -21,6 +21,11 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24
 
+    # Public sign-up only ever creates customers. Creating a stringer account
+    # requires this secret code, so only the owner (who sets it) can become the
+    # stringer. Empty ("") disables stringer sign-up entirely.
+    STRINGER_SIGNUP_CODE: str = ""
+
     # --- Shop hours ----------------------------------------------------------
     # Open-hours slot grid. dropoff_at is validated against these (Task 2) but
     # there is no capacity or booking: any number of jobs may share a slot.

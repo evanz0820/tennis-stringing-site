@@ -17,6 +17,10 @@ from app.config import settings
 from app.database import Base, get_db
 from app.main import app
 
+# Enable stringer sign-up for tests with a known code.
+STRINGER_CODE = "test-stringer-code"
+settings.STRINGER_SIGNUP_CODE = STRINGER_CODE
+
 engine = create_engine(
     "sqlite://",
     connect_args={"check_same_thread": False},
@@ -47,11 +51,11 @@ client = TestClient(app)
 
 
 # --- helpers -----------------------------------------------------------------
-def register(name, email, password, role):
-    resp = client.post(
-        "/auth/register",
-        json={"name": name, "email": email, "password": password, "role": role},
-    )
+def register(name, email, password, role, code=None):
+    body = {"name": name, "email": email, "password": password, "role": role}
+    if code is not None:
+        body["stringer_code"] = code
+    resp = client.post("/auth/register", json=body)
     assert resp.status_code == 201, resp.text
     return resp.json()
 
@@ -80,7 +84,7 @@ def customer():
 
 @pytest.fixture
 def stringer():
-    return register("Sam", "sam@example.com", "password", "stringer")
+    return register("Sam", "sam@example.com", "password", "stringer", code=STRINGER_CODE)
 
 
 # --- auth --------------------------------------------------------------------
@@ -91,6 +95,40 @@ def test_login_returns_token(customer):
     assert resp.status_code == 200
     assert resp.json()["access_token"]
     assert resp.json()["user"]["role"] == "customer"
+
+
+# --- stringer role is gated by the secret code -------------------------------
+def test_public_signup_is_customer_only():
+    # No code -> forced to customer even if role=stringer... but we 403 explicit
+    # stringer attempts, and plain sign-up yields a customer.
+    body = {"name": "Nobody", "email": "n1@example.com", "password": "password"}
+    resp = client.post("/auth/register", json=body)
+    assert resp.status_code == 201
+    assert resp.json()["user"]["role"] == "customer"
+
+
+def test_stringer_signup_without_code_forbidden():
+    resp = client.post("/auth/register", json={
+        "name": "Faker", "email": "f@example.com", "password": "password", "role": "stringer",
+    })
+    assert resp.status_code == 403
+
+
+def test_stringer_signup_with_wrong_code_forbidden():
+    resp = client.post("/auth/register", json={
+        "name": "Faker", "email": "f2@example.com", "password": "password",
+        "role": "stringer", "stringer_code": "not-the-code",
+    })
+    assert resp.status_code == 403
+
+
+def test_stringer_signup_with_correct_code_succeeds():
+    resp = client.post("/auth/register", json={
+        "name": "Owner", "email": "owner@example.com", "password": "password",
+        "role": "stringer", "stringer_code": STRINGER_CODE,
+    })
+    assert resp.status_code == 201
+    assert resp.json()["user"]["role"] == "stringer"
 
 
 # --- info / turnaround (Task 3) ----------------------------------------------

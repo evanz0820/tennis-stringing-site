@@ -201,7 +201,7 @@ function Landing({ info, onStart }) {
 // ---- Auth ------------------------------------------------------------------
 function AuthScreen({ info, onAuthed, onBack, initialMode = 'login' }) {
   const [mode, setMode] = useState(initialMode)
-  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'customer' })
+  const [form, setForm] = useState({ name: '', email: '', password: '', role: 'customer', stringer_code: '' })
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState(false)
 
@@ -267,6 +267,18 @@ function AuthScreen({ info, onAuthed, onBack, initialMode = 'login' }) {
                 <option value="customer">Customer</option>
                 <option value="stringer">Stringer</option>
               </select>
+            </label>
+          )}
+          {mode === 'register' && form.role === 'stringer' && (
+            <label className="field">
+              <span>Stringer access code</span>
+              <input
+                type="password"
+                value={form.stringer_code}
+                onChange={set('stringer_code')}
+                placeholder="Owner-only code"
+                autoComplete="off"
+              />
             </label>
           )}
           {error && <div className="alert error">{error}</div>}

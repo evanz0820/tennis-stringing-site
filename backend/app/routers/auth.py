@@ -1,19 +1,37 @@
 """Registration and login."""
+import secrets
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from .. import schemas
 from ..auth import create_access_token, hash_password, verify_password
+from ..config import settings
 from ..database import get_db
-from ..models import ROLES, User
+from ..models import User
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
+def _resolve_role(payload: schemas.UserCreate) -> str:
+    """Public sign-up is customer-only. The stringer role requires the secret
+    STRINGER_SIGNUP_CODE, so only the owner can create a stringer account."""
+    if payload.role == "stringer":
+        expected = settings.STRINGER_SIGNUP_CODE
+        provided = payload.stringer_code or ""
+        # constant-time compare; also reject if no code is configured at all.
+        if not expected or not secrets.compare_digest(provided, expected):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Stringer sign-up is restricted.",
+            )
+        return "stringer"
+    return "customer"
+
+
 @router.post("/register", response_model=schemas.Token, status_code=status.HTTP_201_CREATED)
 def register(payload: schemas.UserCreate, db: Session = Depends(get_db)):
-    if payload.role not in ROLES:
-        raise HTTPException(status_code=422, detail=f"role must be one of {ROLES}")
+    role = _resolve_role(payload)
     if db.query(User).filter(User.email == payload.email).first():
         raise HTTPException(status_code=400, detail="Email already registered")
 
@@ -21,7 +39,7 @@ def register(payload: schemas.UserCreate, db: Session = Depends(get_db)):
         name=payload.name,
         email=payload.email,
         hashed_password=hash_password(payload.password),
-        role=payload.role,
+        role=role,
     )
     db.add(user)
     db.commit()

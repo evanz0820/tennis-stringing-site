@@ -129,6 +129,7 @@ All are optional in dev (sensible defaults in `app/config.py`). Set these in pro
 | --- | --- | --- |
 | `DATABASE_URL` | `sqlite:///./dev.db` | DB connection. Use a Postgres URL in prod. `postgres://` is normalized to `postgresql://`. |
 | `SECRET_KEY` | `dev-secret-change-me` | JWT signing key. **Change in prod.** |
+| `STRINGER_SIGNUP_CODE` | `""` (off) | Secret code required to register a stringer. Public sign-up is always a customer; only someone with this code can create a stringer account. |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | `1440` | Token lifetime. |
 | `OPEN_TIME` | `09:00` | Shop open time (`HH:MM`, naive local). |
 | `CLOSE_TIME` | `18:00` | Shop close time. |
