@@ -1,0 +1,53 @@
+"""Application settings.
+
+Everything configurable lives here and is read from the environment so the same
+image runs in dev (SQLite) and prod (Postgres via DATABASE_URL). Import the
+module-level ``settings`` singleton; do not read os.environ elsewhere.
+"""
+from functools import lru_cache
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+    # --- Database ------------------------------------------------------------
+    # SQLite in dev; set DATABASE_URL to a Postgres URL in prod.
+    DATABASE_URL: str = "sqlite:///./dev.db"
+
+    # --- Auth ----------------------------------------------------------------
+    SECRET_KEY: str = "dev-secret-change-me"
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24
+
+    # --- Shop hours ----------------------------------------------------------
+    # Open-hours slot grid. dropoff_at is validated against these (Task 2) but
+    # there is no capacity or booking: any number of jobs may share a slot.
+    OPEN_TIME: str = "09:00"   # HH:MM, naive local
+    CLOSE_TIME: str = "18:00"  # HH:MM, naive local
+    SLOT_MINUTES: int = 30
+
+    # --- Display -------------------------------------------------------------
+    # Informational only. Shown to customers; not a promise or a scheduling rule.
+    TURNAROUND_NOTE: str = (
+        "Most racquets are ready within a day, depending on the current queue."
+    )
+
+    # Physical drop-off address. Deliberately NOT served by the public /info
+    # endpoint: it is only returned on the job-creation response, and only when
+    # the customer actually set a drop-off time — so casual browsers never see it.
+    DROP_OFF_ADDRESS: str = "123 Court Lane, Atlanta, GA 30303"
+
+    # --- Misc ----------------------------------------------------------------
+    # Guard for dev convenience only; prod relies on `alembic upgrade head`.
+    CREATE_ALL_ON_STARTUP: bool = False
+    CORS_ORIGINS: str = "http://localhost:5173"
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()
+
+
+settings = get_settings()

@@ -1,0 +1,510 @@
+/* ---- Design tokens ------------------------------------------------------ */
+:root {
+  --bg: #f4f6f8;
+  --surface: #ffffff;
+  --border: #e2e6ea;
+  --text: #1f2933;
+  --muted: #7b8794;
+  --brand: #1f7a3d;        /* tennis court green */
+  --brand-dark: #155f2e;
+  --accent: #cfe8d6;
+  --ball: #c4f000;         /* tennis-ball chartreuse */
+  --danger: #c0392b;
+  --danger-bg: #fdecea;
+  --radius: 12px;
+  --shadow: 0 6px 24px rgba(31, 41, 51, 0.10);
+  --gap: 16px;
+  --input-bg: #ffffff;
+}
+
+/* Dark theme: override the tokens; every component reads these. */
+:root[data-theme="dark"] {
+  --bg: #0f1720;
+  --surface: #16212c;
+  --border: #2a3946;
+  --text: #e6edf3;
+  --muted: #93a1b0;
+  --brand: #35c46b;
+  --brand-dark: #2aa259;
+  --accent: #1e3a2a;
+  --ball: #c4f000;
+  --danger: #ff6b5e;
+  --danger-bg: #3a1f1d;
+  --shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+  --input-bg: #0e161e;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+h2 { font-size: 1.15rem; margin: 0 0 12px; }
+h3 { margin: 0; font-size: 1rem; }
+
+.muted { color: var(--muted); }
+.small { font-size: 0.82rem; }
+.center { text-align: center; }
+
+/* ---- Buttons ------------------------------------------------------------ */
+.btn {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.05s;
+}
+.btn:hover { border-color: var(--brand); }
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: 0.55; cursor: default; }
+.btn.primary { background: var(--brand); border-color: var(--brand); color: #fff; }
+.btn.primary:hover { background: var(--brand-dark); }
+.btn.ghost { background: transparent; }
+.btn.small { padding: 4px 10px; font-size: 0.8rem; }
+
+/* ---- Layout ------------------------------------------------------------- */
+.app { min-height: 100vh; }
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 20px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.topbar-title { font-weight: 700; }
+.topbar-actions { display: flex; align-items: center; gap: 10px; }
+.who { color: var(--muted); font-size: 0.88rem; }
+
+.content {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+  box-shadow: var(--shadow);
+}
+
+/* ---- Forms -------------------------------------------------------------- */
+.stack { display: flex; flex-direction: column; gap: 12px; }
+.row { display: flex; gap: 12px; }
+.row .field { flex: 1; }
+.field { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; }
+.field span { color: var(--muted); }
+input, select, textarea {
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.92rem;
+  font-family: inherit;
+  background: var(--input-bg);
+  color: var(--text);
+}
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px var(--accent);
+}
+.checkbox { display: flex; align-items: center; gap: 8px; font-size: 0.88rem; }
+.checkbox input { width: auto; }
+
+.alert { padding: 10px 12px; border-radius: 8px; font-size: 0.85rem; }
+.alert.error { background: var(--danger-bg); color: var(--danger); }
+
+/* ---- Landing / hero ----------------------------------------------------- */
+.landing { min-height: 100vh; display: flex; flex-direction: column; }
+
+.landing-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 28px; max-width: 1080px; width: 100%; margin: 0 auto;
+}
+.landing-brand { font-weight: 700; font-size: 1.15rem; }
+
+.hero {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 40px;
+  align-items: center;
+  max-width: 1080px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 40px 28px 56px;
+}
+.hero-eyebrow {
+  display: inline-block;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--brand);
+  background: var(--accent);
+  padding: 5px 12px;
+  border-radius: 999px;
+}
+.hero-title {
+  font-size: clamp(2.4rem, 6vw, 3.6rem);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  margin: 18px 0 14px;
+  color: var(--text);
+}
+.hero-sub {
+  font-size: 1.1rem;
+  color: var(--muted);
+  max-width: 30ch;
+  margin: 0 0 26px;
+}
+.hero-cta { display: flex; flex-wrap: wrap; gap: 12px; }
+.btn.big { padding: 13px 22px; font-size: 1rem; border-radius: 10px; }
+.hero-hours { margin-top: 22px; color: var(--muted); font-size: 0.9rem; }
+
+/* Staggered entrance for the hero copy. */
+.hero-copy > * { opacity: 0; animation: fadeUp 0.6s ease forwards; }
+.hero-eyebrow { animation-delay: 0.05s; }
+.hero-title { animation-delay: 0.14s; }
+.hero-sub { animation-delay: 0.24s; }
+.hero-cta { animation-delay: 0.34s; }
+.hero-hours { animation-delay: 0.44s; }
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Court motif built from CSS; ball rests above a center net line. */
+.hero-visual { display: grid; place-items: center; }
+.court {
+  position: relative;
+  width: min(320px, 80%);
+  aspect-ratio: 3 / 4;
+  border-radius: 18px;
+  background:
+    radial-gradient(120% 90% at 50% 0%, var(--brand) 0%, var(--brand-dark) 100%);
+  border: 3px solid rgba(255, 255, 255, 0.35);
+  box-shadow: var(--shadow), inset 0 0 0 12px rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+.court::before {
+  /* baseline + service box outlines */
+  content: '';
+  position: absolute; inset: 22px;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  border-radius: 6px;
+}
+.court-net {
+  position: absolute; left: 0; right: 0; top: 50%;
+  height: 3px; background: rgba(255, 255, 255, 0.7);
+}
+
+/* Soft glow that breathes behind the ball for depth. */
+.court-glow {
+  position: absolute; left: 50%; top: 30%;
+  width: 180px; height: 180px; margin: -90px 0 0 -90px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(196, 240, 0, 0.55), transparent 70%);
+  filter: blur(6px);
+  animation: glowPulse 3.2s ease-in-out infinite;
+}
+
+/* CSS-drawn tennis ball with the classic curved seam. */
+.ball {
+  position: absolute; left: 50%; bottom: 20%;
+  width: 88px; height: 88px; margin-left: -44px;
+  border-radius: 50%;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 32% 26%, #f4ff8a 0%, var(--ball) 46%, #a9c400 100%);
+  box-shadow:
+    inset -7px -9px 16px rgba(0, 0, 0, 0.20),
+    inset 7px 9px 14px rgba(255, 255, 255, 0.35),
+    0 10px 18px rgba(0, 0, 0, 0.28);
+  animation: ballBounce 1.9s cubic-bezier(0.5, 0.05, 0.5, 0.95) infinite;
+  transform-origin: center bottom;
+  will-change: transform;
+}
+/* Two oversized circles crossing the ball read as the seam arcs. */
+.ball::before,
+.ball::after {
+  content: '';
+  position: absolute;
+  width: 150%; height: 150%; top: 12%;
+  border-radius: 50%;
+  border: 5px solid rgba(255, 255, 255, 0.92);
+  box-sizing: border-box;
+}
+.ball::before { left: -98%; }
+.ball::after { left: 48%; }
+
+.ball-shadow {
+  position: absolute; left: 50%; bottom: 16%;
+  width: 76px; height: 15px; margin-left: -38px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(0, 0, 0, 0.38), transparent);
+  animation: shadowPulse 1.9s cubic-bezier(0.5, 0.05, 0.5, 0.95) infinite;
+  will-change: transform, opacity;
+}
+
+@keyframes ballBounce {
+  0%   { transform: translateY(-135px) scale(1, 1); animation-timing-function: cubic-bezier(0.45, 0, 0.9, 0.55); }
+  45%  { transform: translateY(0) scale(1, 1); animation-timing-function: cubic-bezier(0.2, 0, 0, 1); }
+  52%  { transform: translateY(6px) scale(1.14, 0.82); }   /* squash on impact */
+  60%  { transform: translateY(0) scale(0.97, 1.04); animation-timing-function: cubic-bezier(0.35, 0, 0.2, 1); } /* rebound stretch */
+  100% { transform: translateY(-135px) scale(1, 1); }
+}
+@keyframes shadowPulse {
+  0%   { transform: scale(0.62); opacity: 0.25; }
+  45%  { transform: scale(1); opacity: 0.5; }
+  52%  { transform: scale(1.12); opacity: 0.55; }
+  100% { transform: scale(0.62); opacity: 0.25; }
+}
+@keyframes glowPulse {
+  0%, 100% { opacity: 0.55; transform: scale(0.92); }
+  50%      { opacity: 0.9; transform: scale(1.06); }
+}
+
+.features {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  max-width: 1080px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 28px 48px;
+}
+.feature { text-align: left; }
+.feature-icon { font-size: 1.6rem; margin-bottom: 8px; }
+.feature h3 { margin-bottom: 6px; }
+.feature p { margin: 0; color: var(--muted); font-size: 0.92rem; }
+
+.landing-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  max-width: 1080px; width: 100%; margin: 0 auto;
+  padding: 24px 28px 40px;
+  border-top: 1px solid var(--border);
+}
+
+@media (max-width: 760px) {
+  .hero { grid-template-columns: 1fr; padding-top: 24px; }
+  .hero-visual { order: -1; }
+  .court { width: min(240px, 70%); }
+  .features { grid-template-columns: 1fr; }
+}
+
+/* ---- Auth --------------------------------------------------------------- */
+.back-link {
+  background: none; border: none; color: var(--muted);
+  cursor: pointer; font-size: 0.85rem; padding: 0; align-self: flex-start;
+}
+.back-link:hover { color: var(--brand); }
+.auth-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+
+/* ---- Theme toggle ------------------------------------------------------- */
+.icon-btn { padding: 7px 10px; line-height: 1; font-size: 1rem; }
+.landing-nav-actions { display: flex; align-items: center; gap: 10px; }
+
+/* ---- Dark-mode fine-tuning for elements with baked-in colors ------------ */
+:root[data-theme="dark"] .banner { border-color: #2f5a41; }
+:root[data-theme="dark"] .turnaround { color: #7ee2a0; }
+:root[data-theme="dark"] .pill-requested { background: #263340; color: #b6c4d2; }
+:root[data-theme="dark"] .pill-received { background: #16324f; color: #8fc0f5; }
+:root[data-theme="dark"] .pill-in_progress { background: #3a2f12; color: #e6c463; }
+:root[data-theme="dark"] .pill-completed { background: #1e3a2a; color: #7ee2a0; }
+:root[data-theme="dark"] .pill-picked_up { background: #263340; color: #b6c4d2; }
+:root[data-theme="dark"] .pill-cancelled { background: #3a1f1d; color: #ff9b90; }
+/* Keep the tennis-ball count chip dark-text on chartreuse in both themes. */
+:root[data-theme="dark"] .queue-count { color: #1f2933; }
+
+.auth-wrap { min-height: 100vh; display: grid; place-items: center; padding: 20px; }
+.auth-card { width: 100%; max-width: 380px; }
+.brand { font-size: 1.3rem; font-weight: 700; text-align: center; margin-bottom: 14px; }
+.tabs { display: flex; margin-bottom: 16px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.tab { flex: 1; border: none; background: var(--surface); color: var(--text); padding: 8px; cursor: pointer; }
+.tab.active { background: var(--brand); color: #fff; }
+
+/* ---- Banner + turnaround note ------------------------------------------- */
+.banner {
+  max-width: 900px;
+  margin: 16px auto 0;
+  padding: 12px 16px;
+  background: var(--accent);
+  border: 1px solid #b7dcc2;
+  border-radius: var(--radius);
+  font-size: 0.88rem;
+}
+.turnaround { color: var(--brand-dark); font-style: italic; }
+.banner-inline {
+  background: var(--accent);
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin: 12px 0;
+}
+
+.dropoff-address {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 12px 0;
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px dashed var(--brand);
+  border-radius: 8px;
+}
+.dropoff-address-label { color: var(--muted); font-size: 0.8rem; }
+.dropoff-address-value { font-weight: 600; }
+
+/* ---- Confirmation ------------------------------------------------------- */
+.confirmation { text-align: center; }
+.confirmation .check {
+  width: 48px; height: 48px; margin: 0 auto 8px;
+  border-radius: 50%; background: var(--brand); color: #fff;
+  display: grid; place-items: center; font-size: 1.4rem;
+}
+
+/* ---- Job lists ---------------------------------------------------------- */
+.joblist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.jobrow {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;
+}
+.jobrow-main { font-weight: 600; }
+
+.jobs-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.jobs-table th { text-align: left; color: var(--muted); font-weight: 600; padding: 8px; border-bottom: 1px solid var(--border); }
+.jobs-table td { padding: 10px 8px; border-bottom: 1px solid var(--border); }
+
+/* ---- Stats -------------------------------------------------------------- */
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.stat { padding: 14px; text-align: center; }
+.stat-value { font-size: 1.6rem; font-weight: 700; color: var(--brand); }
+.stat-label { color: var(--muted); font-size: 0.8rem; }
+
+/* ---- Status pills ------------------------------------------------------- */
+.pill { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
+.pill-requested { background: #eef2f7; color: #52606d; }
+.pill-received { background: #e3f0ff; color: #1b64c0; }
+.pill-in_progress { background: #fff4d6; color: #9a6b00; }
+.pill-completed { background: var(--accent); color: var(--brand-dark); }
+.pill-picked_up { background: #eceff1; color: #52606d; }
+.pill-cancelled { background: var(--danger-bg); color: var(--danger); }
+
+/* ---- Queue button + count ---------------------------------------------- */
+.queue-btn { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; }
+.queue-count {
+  display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px;
+  background: var(--ball); color: #1f2933; border-radius: 999px; font-size: 0.78rem; font-weight: 700;
+}
+
+/* ---- Queue drawer (top-right) ------------------------------------------ */
+.scrim { position: fixed; inset: 0; background: rgba(15, 23, 30, 0.28); z-index: 35; }
+.queue-panel {
+  position: fixed;
+  top: 0; right: 0;
+  height: 100vh;
+  width: 340px;
+  max-width: 92vw;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  transform: translateX(105%);
+  transition: transform 0.22s ease;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+}
+.queue-panel.open { transform: translateX(0); }
+.queue-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.queue-head h3 { display: inline-flex; align-items: center; gap: 8px; }
+.queue-empty { margin-top: 24px; text-align: center; }
+.queue-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+.queue-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px; border: 1px solid var(--border); border-radius: 10px;
+  transition: opacity 0.2s;
+}
+.queue-item-body { flex: 1; min-width: 0; }
+.queue-item-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.queue-name { font-weight: 600; }
+.queue-racquet { margin: 2px 0; }
+.crossoff {
+  flex-shrink: 0;
+  width: 38px; height: 38px; border-radius: 50%;
+  background: var(--brand); border-color: var(--brand); color: #fff;
+  font-size: 1rem; display: grid; place-items: center;
+}
+.crossoff:hover { background: var(--brand-dark); }
+
+/* Strike-through animation on cross-off. */
+.queue-item.striking { opacity: 0.35; }
+.queue-item.striking .queue-name,
+.queue-item.striking .queue-racquet {
+  position: relative;
+}
+.queue-item.striking .queue-racquet::after,
+.queue-item.striking .queue-name::after {
+  content: '';
+  position: absolute;
+  left: 0; top: 50%;
+  height: 2px; width: 100%;
+  background: var(--text);
+  transform-origin: left center;
+  animation: strike 0.4s ease forwards;
+}
+@keyframes strike {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+/* ---- Modal -------------------------------------------------------------- */
+.modal-scrim {
+  position: fixed; inset: 0; background: rgba(15, 23, 30, 0.4);
+  display: grid; place-items: center; z-index: 50; padding: 20px;
+}
+.modal { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 12px; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 4px; }
+
+/* ---- Responsive --------------------------------------------------------- */
+@media (max-width: 640px) {
+  .stats { grid-template-columns: repeat(2, 1fr); }
+  .topbar { padding: 10px 12px; }
+  .who { display: none; }               /* keep Queue + Log out from crowding */
+  .queue-panel { width: 100vw; }
+  .jobs-table th:nth-child(3),
+  .jobs-table td:nth-child(3),
+  .jobs-table th:nth-child(4),
+  .jobs-table td:nth-child(4) { display: none; } /* hide drop-off + tension cols on narrow */
+}
+
+/* Respect reduced motion: no strike animation, no drawer slide. */
+@media (prefers-reduced-motion: reduce) {
+  .queue-panel { transition: none; }
+  .queue-item.striking .queue-racquet::after,
+  .queue-item.striking .queue-name::after { animation: none; transform: scaleX(1); }
+  .btn { transition: none; }
+  /* Hold the hero animations at their resting state. */
+  .ball { animation: none; transform: translateY(-60px); }
+  .ball-shadow { animation: none; opacity: 0.35; }
+  .court-glow { animation: none; }
+  .hero-copy > * { opacity: 1; animation: none; }
+}
