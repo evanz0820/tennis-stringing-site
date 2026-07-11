@@ -52,12 +52,32 @@ client = TestClient(app)
 
 # --- helpers -----------------------------------------------------------------
 def register(name, email, password, role, code=None):
+    """Register + verify (email is disabled in tests, so the code is returned as
+    dev_code). Returns the Token payload, matching pre-verification behaviour."""
     body = {"name": name, "email": email, "password": password, "role": role}
     if code is not None:
         body["stringer_code"] = code
     resp = client.post("/auth/register", json=body)
     assert resp.status_code == 201, resp.text
-    return resp.json()
+    dev_code = resp.json()["dev_code"]
+    assert dev_code, "email disabled in tests should return dev_code"
+    v = client.post("/auth/verify", json={"email": email, "code": dev_code})
+    assert v.status_code == 200, v.text
+    return v.json()
+
+
+@pytest.fixture
+def sent(monkeypatch):
+    """Capture outbound emails (to, subject, body) from the routers."""
+    box = []
+
+    def fake(to, subject, body):
+        box.append((to, subject, body))
+        return True
+
+    monkeypatch.setattr("app.routers.jobs.try_send", fake)
+    monkeypatch.setattr("app.routers.auth.try_send", fake)
+    return box
 
 
 def auth_header(token):
@@ -97,14 +117,41 @@ def test_login_returns_token(customer):
     assert resp.json()["user"]["role"] == "customer"
 
 
+# --- email verification ------------------------------------------------------
+def test_register_requires_verification_before_login():
+    resp = client.post("/auth/register", json={
+        "name": "Vera", "email": "vera@example.com", "password": "password",
+    })
+    assert resp.status_code == 201
+    assert resp.json()["verification_required"] is True
+    code = resp.json()["dev_code"]
+    assert code
+
+    # Login blocked until verified.
+    pre = client.post("/auth/login", json={"email": "vera@example.com", "password": "password"})
+    assert pre.status_code == 403
+    assert "verif" in pre.json()["detail"].lower()
+
+    # Verify -> token, and login now works.
+    v = client.post("/auth/verify", json={"email": "vera@example.com", "code": code})
+    assert v.status_code == 200
+    assert v.json()["user"]["email_verified"] is True
+    post = client.post("/auth/login", json={"email": "vera@example.com", "password": "password"})
+    assert post.status_code == 200
+
+
+def test_verify_wrong_code_rejected():
+    client.post("/auth/register", json={
+        "name": "Wanda", "email": "wanda@example.com", "password": "password",
+    })
+    resp = client.post("/auth/verify", json={"email": "wanda@example.com", "code": "000000"})
+    assert resp.status_code == 400
+
+
 # --- stringer role is gated by the secret code -------------------------------
 def test_public_signup_is_customer_only():
-    # No code -> forced to customer even if role=stringer... but we 403 explicit
-    # stringer attempts, and plain sign-up yields a customer.
-    body = {"name": "Nobody", "email": "n1@example.com", "password": "password"}
-    resp = client.post("/auth/register", json=body)
-    assert resp.status_code == 201
-    assert resp.json()["user"]["role"] == "customer"
+    res = register("Nobody", "n1@example.com", "password", "customer")
+    assert res["user"]["role"] == "customer"
 
 
 def test_stringer_signup_without_code_forbidden():
@@ -123,12 +170,8 @@ def test_stringer_signup_with_wrong_code_forbidden():
 
 
 def test_stringer_signup_with_correct_code_succeeds():
-    resp = client.post("/auth/register", json={
-        "name": "Owner", "email": "owner@example.com", "password": "password",
-        "role": "stringer", "stringer_code": STRINGER_CODE,
-    })
-    assert resp.status_code == 201
-    assert resp.json()["user"]["role"] == "stringer"
+    res = register("Owner", "owner@example.com", "password", "stringer", code=STRINGER_CODE)
+    assert res["user"]["role"] == "stringer"
 
 
 # --- info / turnaround (Task 3) ----------------------------------------------
@@ -293,6 +336,46 @@ def test_active_statuses_and_cross_off(customer, stringer):
     jobs = client.get("/jobs", headers=auth_header(stringer["access_token"])).json()
     active = [j for j in jobs if j["status"] in ("requested", "received", "in_progress")]
     assert len(active) == 2
+
+
+def test_ready_email_and_pickup_confirmation(customer, stringer, sent):
+    job = make_job(customer["access_token"]).json()
+
+    # Stringer marks it ready (completed) -> customer gets a ready email.
+    r = client.patch(
+        f"/jobs/{job['id']}", json={"status": "completed"},
+        headers=auth_header(stringer["access_token"]),
+    )
+    assert r.status_code == 200 and r.json()["status"] == "completed"
+    assert any("ready" in subj.lower() for _, subj, _ in sent)
+
+    # Customer confirms a valid pickup time -> stringer gets notified.
+    r = client.patch(
+        f"/jobs/{job['id']}", json={"pickup_eta": next_open_slot(11, 0)},
+        headers=auth_header(customer["access_token"]),
+    )
+    assert r.status_code == 200 and r.json()["pickup_eta"] is not None
+    assert any("pickup scheduled" in subj.lower() for _, subj, _ in sent)
+
+
+def test_ready_email_only_fires_once(customer, stringer, sent):
+    job = make_job(customer["access_token"]).json()
+    for _ in range(2):
+        client.patch(
+            f"/jobs/{job['id']}", json={"status": "completed"},
+            headers=auth_header(stringer["access_token"]),
+        )
+    ready = [s for s in sent if "ready" in s[1].lower()]
+    assert len(ready) == 1  # no duplicate emails on re-PATCH to same status
+
+
+def test_pickup_eta_off_grid_rejected(customer):
+    job = make_job(customer["access_token"]).json()
+    r = client.patch(
+        f"/jobs/{job['id']}", json={"pickup_eta": next_open_slot(11, 7)},
+        headers=auth_header(customer["access_token"]),
+    )
+    assert r.status_code == 422
 
 
 def test_customer_cannot_advance_status(customer):

@@ -35,15 +35,17 @@ def open_slots(settings: Settings) -> list[time]:
     return slots
 
 
-def dropoff_error(
+def slot_error(
     value: datetime | None,
     settings: Settings | None = None,
     now: datetime | None = None,
+    label: str = "Time",
 ) -> str | None:
-    """Return a human-readable error for an invalid dropoff_at, else None.
+    """Return a human-readable error for an invalid slot datetime, else None.
 
-    ``now`` is injectable for testing; defaults to naive local now to match the
-    naive-local semantics of dropoff_at.
+    Validates the same two rules used for drop-off and pickup: not in the past,
+    and on an open-hours slot boundary. ``now`` is injectable for testing;
+    defaults to naive local now to match the naive-local semantics of the field.
     """
     if value is None:
         return None
@@ -52,13 +54,17 @@ def dropoff_error(
     now = now or datetime.now()
 
     if value < now:
-        return "Drop-off time cannot be in the past."
+        return f"{label} cannot be in the past."
 
     valid = open_slots(settings)
     if value.time() not in set(valid):
         pretty = f"{settings.OPEN_TIME}-{settings.CLOSE_TIME}"
         return (
-            f"Drop-off time must fall on a {settings.SLOT_MINUTES}-minute slot "
+            f"{label} must fall on a {settings.SLOT_MINUTES}-minute slot "
             f"boundary within open hours ({pretty})."
         )
     return None
+
+
+def dropoff_error(value, settings=None, now=None):
+    return slot_error(value, settings, now, label="Drop-off time")

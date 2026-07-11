@@ -6,10 +6,11 @@ Run after `alembic upgrade head`:
 
 Idempotent-ish: skips users that already exist by email.
 """
+import os
 from datetime import datetime, time, timedelta
 
 from .auth import hash_password
-from .database import SessionLocal
+from .database import DATABASE_URL, SessionLocal
 from .models import StringingJob, User
 
 
@@ -23,7 +24,10 @@ def get_or_create_user(db, *, name, email, password, role) -> User:
     user = db.query(User).filter(User.email == email).first()
     if user:
         return user
-    user = User(name=name, email=email, hashed_password=hash_password(password), role=role)
+    user = User(
+        name=name, email=email, hashed_password=hash_password(password),
+        role=role, email_verified=True,  # dev users skip the email step
+    )
     db.add(user)
     db.commit()
     db.refresh(user)
@@ -31,6 +35,16 @@ def get_or_create_user(db, *, name, email, password, role) -> User:
 
 
 def run() -> None:
+    # Safety: never drop demo data onto a real (non-SQLite) database like Neon
+    # unless explicitly forced. This keeps test data off production.
+    if not DATABASE_URL.startswith("sqlite") and os.getenv("SEED_ALLOW_REMOTE") != "true":
+        print(
+            "Refusing to seed a non-SQLite database "
+            f"({DATABASE_URL.split('@')[-1][:40]}...). "
+            "Set SEED_ALLOW_REMOTE=true to override."
+        )
+        return
+
     db = SessionLocal()
     try:
         get_or_create_user(

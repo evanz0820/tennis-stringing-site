@@ -11,8 +11,9 @@ from .. import schemas
 from ..auth import get_current_user
 from ..config import settings
 from ..database import get_db
+from ..email import try_send
 from ..models import JOB_STATUSES, StringingJob, User
-from ..scheduling import dropoff_error
+from ..scheduling import dropoff_error, slot_error
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 
@@ -22,6 +23,39 @@ def _validate_dropoff(value):
     error = dropoff_error(value)
     if error:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=error)
+
+
+def _validate_pickup(value):
+    error = slot_error(value, label="Pickup time")
+    if error:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=error)
+
+
+def _fmt(dt) -> str:
+    return dt.strftime("%a %b %-d at %-I:%M %p") if dt else "a flexible time"
+
+
+def _notify_ready(job: StringingJob) -> None:
+    """Email the customer that their racquet is ready for pickup."""
+    try_send(
+        job.customer.email,
+        "Your racquet is ready for pickup 🎾 — Strings by Evan",
+        f"Hi {job.customer.name},\n\n"
+        f"Good news — your {job.racquet} is freshly strung and ready for pickup!\n\n"
+        f"Please log in and confirm when you'll come by: {settings.APP_BASE_URL}\n\n"
+        "Thanks,\nStrings by Evan",
+    )
+
+
+def _notify_pickup_scheduled(job: StringingJob, db: Session) -> None:
+    """Email every stringer that the customer confirmed a pickup time."""
+    for stringer in db.query(User).filter(User.role == "stringer").all():
+        try_send(
+            stringer.email,
+            f"Pickup scheduled: {job.customer.name} — {job.racquet}",
+            f"{job.customer.name} will pick up their {job.racquet} "
+            f"({_fmt(job.pickup_eta)}).",
+        )
 
 
 @router.post("", response_model=schemas.JobCreatedOut, status_code=status.HTTP_201_CREATED)
@@ -82,6 +116,8 @@ def update_job(
         raise HTTPException(status_code=403, detail="Not your job")
 
     data = payload.model_dump(exclude_unset=True)
+    prev_status = job.status
+    pickup_confirmed = False
 
     if "status" in data and data["status"] is not None:
         new_status = data["status"]
@@ -97,6 +133,12 @@ def update_job(
         _validate_dropoff(data["dropoff_at"])
         job.dropoff_at = data["dropoff_at"]
 
+    if "pickup_eta" in data:
+        # Customer (or stringer) confirming when they'll pick up a ready racquet.
+        _validate_pickup(data["pickup_eta"])
+        pickup_confirmed = data["pickup_eta"] is not None and data["pickup_eta"] != job.pickup_eta
+        job.pickup_eta = data["pickup_eta"]
+
     if "string_preference" in data:
         job.string_preference = data["string_preference"]
     if "tension" in data:
@@ -106,4 +148,12 @@ def update_job(
 
     db.commit()
     db.refresh(job)
+
+    # Side effects after the state is safely persisted. Email is best-effort and
+    # never blocks or fails the update.
+    if job.status == "completed" and prev_status != "completed":
+        _notify_ready(job)
+    if pickup_confirmed:
+        _notify_pickup_scheduled(job, db)
+
     return job

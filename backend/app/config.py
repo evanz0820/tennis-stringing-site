@@ -26,6 +26,20 @@ class Settings(BaseSettings):
     # stringer. Empty ("") disables stringer sign-up entirely.
     STRINGER_SIGNUP_CODE: str = ""
 
+    # --- Email (Gmail SMTP) --------------------------------------------------
+    # Set SMTP_USER (your Gmail) + SMTP_PASSWORD (a Gmail App Password) to enable
+    # sending. If either is empty, email is disabled and messages are logged
+    # instead (so dev/tests never block on SMTP).
+    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    EMAIL_FROM: str = ""  # display From; defaults to SMTP_USER when empty
+    VERIFICATION_TTL_MINUTES: int = 15
+
+    # Public URL of the app, used in email links.
+    APP_BASE_URL: str = "http://localhost:5173"
+
     # --- Shop hours ----------------------------------------------------------
     # Open-hours slot grid. dropoff_at is validated against these (Task 2) but
     # there is no capacity or booking: any number of jobs may share a slot.

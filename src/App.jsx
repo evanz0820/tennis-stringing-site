@@ -202,28 +202,68 @@ function Landing({ info, onStart }) {
 function AuthScreen({ info, onAuthed, onBack, initialMode = 'login' }) {
   const [mode, setMode] = useState(initialMode)
   const [form, setForm] = useState({ name: '', email: '', password: '', role: 'customer', stringer_code: '' })
+  const [pending, setPending] = useState(null) // { email, devCode } -> verify step
+  const [code, setCode] = useState('')
   const [error, setError] = useState(null)
+  const [notice, setNotice] = useState(null)
   const [busy, setBusy] = useState(false)
 
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.value })
 
+  function startVerify(email, devCode) {
+    setPending({ email, devCode })
+    setCode(devCode || '')
+    setError(null)
+  }
+
   async function submit(e) {
     e.preventDefault()
-    setBusy(true)
-    setError(null)
+    setBusy(true); setError(null); setNotice(null)
     try {
-      const fn = mode === 'login' ? api.login : api.register
-      const payload =
-        mode === 'login'
-          ? { email: form.email, password: form.password }
-          : form
-      const res = await fn(payload)
-      saveSession(res)
-      onAuthed(res.user)
+      if (mode === 'login') {
+        const res = await api.login({ email: form.email, password: form.password })
+        saveSession(res); onAuthed(res.user)
+      } else {
+        const res = await api.register(form)
+        startVerify(form.email, res.dev_code)
+        setNotice(`We emailed a code to ${form.email}.`)
+      }
+    } catch (err) {
+      // Unverified login -> send a fresh code and move to the verify step.
+      if (mode === 'login' && /not verified/i.test(err.message)) {
+        let devCode = null
+        try { devCode = (await api.resendCode({ email: form.email }))?.dev_code } catch { /* ignore */ }
+        startVerify(form.email, devCode)
+        setNotice('Please verify your email — we sent you a code.')
+      } else {
+        setError(err.message)
+      }
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function submitCode(e) {
+    e.preventDefault()
+    setBusy(true); setError(null)
+    try {
+      const res = await api.verifyEmail({ email: pending.email, code: code.trim() })
+      saveSession(res); onAuthed(res.user)
     } catch (err) {
       setError(err.message)
     } finally {
       setBusy(false)
+    }
+  }
+
+  async function resend() {
+    setError(null); setNotice(null)
+    try {
+      const r = await api.resendCode({ email: pending.email })
+      if (r?.dev_code) setCode(r.dev_code)
+      setNotice('New code sent.')
+    } catch (err) {
+      setError(err.message)
     }
   }
 
@@ -237,56 +277,94 @@ function AuthScreen({ info, onAuthed, onBack, initialMode = 'login' }) {
           <ThemeToggle />
         </div>
         <div className="brand">🎾 Strings by Evan</div>
-        <div className="tabs">
-          <button className={mode === 'login' ? 'tab active' : 'tab'} onClick={() => setMode('login')}>
-            Log in
-          </button>
-          <button className={mode === 'register' ? 'tab active' : 'tab'} onClick={() => setMode('register')}>
-            Sign up
-          </button>
-        </div>
-        <form onSubmit={submit} className="stack">
-          {mode === 'register' && (
+
+        {pending ? (
+          <form onSubmit={submitCode} className="stack">
+            <h2 className="center">Verify your email</h2>
+            <p className="muted center">
+              Enter the 6-digit code we sent to <strong>{pending.email}</strong>.
+            </p>
             <label className="field">
-              <span>Name</span>
-              <input value={form.name} onChange={set('name')} required />
-            </label>
-          )}
-          <label className="field">
-            <span>Email</span>
-            <input type="email" value={form.email} onChange={set('email')} required />
-          </label>
-          <label className="field">
-            <span>Password</span>
-            <input type="password" value={form.password} onChange={set('password')} required minLength={6} />
-          </label>
-          {mode === 'register' && (
-            <label className="field">
-              <span>I am a</span>
-              <select value={form.role} onChange={set('role')}>
-                <option value="customer">Customer</option>
-                <option value="stringer">Stringer</option>
-              </select>
-            </label>
-          )}
-          {mode === 'register' && form.role === 'stringer' && (
-            <label className="field">
-              <span>Stringer access code</span>
+              <span>Verification code</span>
               <input
-                type="password"
-                value={form.stringer_code}
-                onChange={set('stringer_code')}
-                placeholder="Owner-only code"
-                autoComplete="off"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                placeholder="123456"
+                required
               />
             </label>
-          )}
-          {error && <div className="alert error">{error}</div>}
-          <button className="btn primary" disabled={busy} type="submit">
-            {busy ? '…' : mode === 'login' ? 'Log in' : 'Create account'}
-          </button>
-        </form>
-        {info && <p className="muted center">Open {info.open_time}–{info.close_time}</p>}
+            {pending.devCode && (
+              <p className="muted small center">Dev mode — your code is {pending.devCode}</p>
+            )}
+            {notice && <div className="alert notice">{notice}</div>}
+            {error && <div className="alert error">{error}</div>}
+            <button className="btn primary" disabled={busy} type="submit">
+              {busy ? '…' : 'Verify & continue'}
+            </button>
+            <div className="auth-links">
+              <button type="button" className="back-link" onClick={resend}>Resend code</button>
+              <button type="button" className="back-link" onClick={() => { setPending(null); setError(null); setNotice(null) }}>
+                Use a different email
+              </button>
+            </div>
+          </form>
+        ) : (
+          <>
+            <div className="tabs">
+              <button className={mode === 'login' ? 'tab active' : 'tab'} onClick={() => setMode('login')}>
+                Log in
+              </button>
+              <button className={mode === 'register' ? 'tab active' : 'tab'} onClick={() => setMode('register')}>
+                Sign up
+              </button>
+            </div>
+            <form onSubmit={submit} className="stack">
+              {mode === 'register' && (
+                <label className="field">
+                  <span>Name</span>
+                  <input value={form.name} onChange={set('name')} required />
+                </label>
+              )}
+              <label className="field">
+                <span>Email</span>
+                <input type="email" value={form.email} onChange={set('email')} required />
+              </label>
+              <label className="field">
+                <span>Password</span>
+                <input type="password" value={form.password} onChange={set('password')} required minLength={6} />
+              </label>
+              {mode === 'register' && (
+                <label className="field">
+                  <span>I am a</span>
+                  <select value={form.role} onChange={set('role')}>
+                    <option value="customer">Customer</option>
+                    <option value="stringer">Stringer</option>
+                  </select>
+                </label>
+              )}
+              {mode === 'register' && form.role === 'stringer' && (
+                <label className="field">
+                  <span>Stringer access code</span>
+                  <input
+                    type="password"
+                    value={form.stringer_code}
+                    onChange={set('stringer_code')}
+                    placeholder="Owner-only code"
+                    autoComplete="off"
+                  />
+                </label>
+              )}
+              {notice && <div className="alert notice">{notice}</div>}
+              {error && <div className="alert error">{error}</div>}
+              <button className="btn primary" disabled={busy} type="submit">
+                {busy ? '…' : mode === 'login' ? 'Log in' : 'Create account'}
+              </button>
+            </form>
+            {info && <p className="muted center">Open {info.open_time}–{info.close_time}</p>}
+          </>
+        )}
       </div>
     </div>
   )
@@ -307,6 +385,78 @@ function TopBar({ title, user, onLogout, right }) {
   )
 }
 
+// ---- Ready-for-pickup banner (customer) ------------------------------------
+function ReadyBanner({ jobs, info, onConfirm }) {
+  const ready = jobs.filter((j) => j.status === 'completed')
+  if (ready.length === 0) return null
+  return (
+    <div className="ready-banner">
+      {ready.map((j) => (
+        <ReadyRow key={j.id} job={j} info={info} onConfirm={onConfirm} />
+      ))}
+    </div>
+  )
+}
+
+function ReadyRow({ job, info, onConfirm }) {
+  const [open, setOpen] = useState(false)
+  const [date, setDate] = useState('')
+  const [slot, setSlot] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState(null)
+  const slots = useMemo(() => slotOptions(info, date), [info, date])
+
+  if (job.pickup_eta) {
+    return (
+      <div className="ready-row confirmed">
+        ✅ <strong>{job.racquet}</strong> is ready — pickup confirmed for{' '}
+        {formatDropoff(job.pickup_eta)}. See you then!
+      </div>
+    )
+  }
+
+  async function confirm(e) {
+    e.preventDefault()
+    if (!date || !slot) { setError('Pick a date and time.'); return }
+    setBusy(true); setError(null)
+    try {
+      await onConfirm(job.id, `${date}T${slot}:00`)
+    } catch (err) {
+      setError(err.message); setBusy(false)
+    }
+  }
+
+  return (
+    <div className="ready-row">
+      <div className="ready-row-head">
+        <span>🎾 <strong>{job.racquet}</strong> is ready for pickup!</span>
+        {!open && (
+          <button className="btn primary small" onClick={() => setOpen(true)}>
+            Confirm pickup time
+          </button>
+        )}
+      </div>
+      {open && (
+        <form className="row ready-form" onSubmit={confirm}>
+          <label className="field">
+            <span>Date</span>
+            <input type="date" value={date} onChange={(e) => { setDate(e.target.value); setSlot('') }} />
+          </label>
+          <label className="field">
+            <span>Time</span>
+            <select value={slot} onChange={(e) => setSlot(e.target.value)}>
+              <option value="">Select…</option>
+              {slots.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </label>
+          <button className="btn primary" disabled={busy} type="submit">{busy ? '…' : 'Confirm'}</button>
+        </form>
+      )}
+      {error && <div className="alert error">{error}</div>}
+    </div>
+  )
+}
+
 // ---- Customer --------------------------------------------------------------
 function CustomerView({ user, info, onLogout }) {
   const [jobs, setJobs] = useState([])
@@ -316,9 +466,19 @@ function CustomerView({ user, info, onLogout }) {
     api.listJobs().then(setJobs).catch(() => {})
   }, [])
   useEffect(() => { load() }, [load])
+  // Light polling so a "ready for pickup" alert shows up without a manual reload.
+  useEffect(() => {
+    const id = setInterval(load, POLL_MS)
+    return () => clearInterval(id)
+  }, [load])
 
   function onCreated(job) {
     setConfirmation(job)
+    load()
+  }
+
+  async function confirmPickup(id, pickup_eta) {
+    await api.updateJob(id, { pickup_eta })
     load()
   }
 
@@ -335,6 +495,8 @@ function CustomerView({ user, info, onLogout }) {
       )}
 
       <main className="content">
+        <ReadyBanner jobs={jobs} info={info} onConfirm={confirmPickup} />
+
         {confirmation ? (
           <Confirmation job={confirmation} info={info} onDone={() => setConfirmation(null)} />
         ) : (
@@ -352,6 +514,7 @@ function CustomerView({ user, info, onLogout }) {
                   <div className="muted small">
                     {formatDropoff(j.dropoff_at)}
                     {j.tension ? ` · ${j.tension} lbs` : ''}
+                    {j.pickup_eta ? ` · pickup ${formatDropoff(j.pickup_eta)}` : ''}
                   </div>
                 </div>
                 <StatusPill status={j.status} />
@@ -611,7 +774,12 @@ function StringerView({ user, info, onLogout }) {
                   <td>{j.racquet}</td>
                   <td>{formatDropoff(j.dropoff_at)}</td>
                   <td>{j.tension ? `${j.tension} lbs` : '—'}</td>
-                  <td><StatusPill status={j.status} /></td>
+                  <td>
+                    <StatusPill status={j.status} />
+                    {j.pickup_eta && (
+                      <div className="muted small">🚗 pickup {formatDropoff(j.pickup_eta)}</div>
+                    )}
+                  </td>
                   <td><button className="btn ghost small" onClick={() => setEditing(j)}>Manage</button></td>
                 </tr>
               ))}
@@ -713,8 +881,8 @@ function QueueDrawer({ open, active, onClose, onComplete }) {
                 className="btn crossoff"
                 onClick={() => crossOff(j.id)}
                 disabled={striking.has(j.id)}
-                title="Mark completed"
-                aria-label={`Mark ${j.racquet} completed`}
+                title="Mark ready — emails the customer to come pick up"
+                aria-label={`Mark ${j.racquet} ready for pickup`}
               >
                 ✓
               </button>

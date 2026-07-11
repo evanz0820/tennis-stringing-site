@@ -1,7 +1,7 @@
 """ORM models. Table names are explicit so migrations stay stable."""
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, false
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
@@ -32,6 +32,14 @@ class User(Base):
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     role: Mapped[str] = mapped_column(String(20), nullable=False, default="customer")
 
+    # Email verification (Task: email auth). New users start unverified; a code
+    # is emailed and must be confirmed before login.
+    email_verified: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=false(), default=False
+    )
+    verification_code_hash: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    verification_expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
     jobs: Mapped[list["StringingJob"]] = relationship(
         back_populates="customer", cascade="all, delete-orphan"
     )
@@ -54,6 +62,10 @@ class StringingJob(Base):
     # Naive local datetime: when the customer plans to hand off the racquet.
     # NOT an appointment slot; null means "flexible". No capacity/booking.
     dropoff_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    # When the customer confirms they'll come pick up a ready racquet. Null until
+    # confirmed. Same open-hours slot semantics as dropoff_at; not a booking.
+    pickup_eta: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, default=datetime.utcnow

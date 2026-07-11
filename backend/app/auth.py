@@ -1,4 +1,6 @@
 """JWT auth helpers and role-based dependencies."""
+import hashlib
+import secrets
 from datetime import datetime, timedelta
 
 from fastapi import Depends, HTTPException, status
@@ -21,6 +23,20 @@ def hash_password(password: str) -> str:
 
 def verify_password(plain: str, hashed: str) -> bool:
     return pwd_context.verify(plain, hashed)
+
+
+# --- Email verification codes -----------------------------------------------
+def generate_code() -> str:
+    """A 6-digit numeric verification code."""
+    return f"{secrets.randbelow(1_000_000):06d}"
+
+
+def hash_code(code: str) -> str:
+    return hashlib.sha256(code.encode()).hexdigest()
+
+
+def verification_expiry() -> datetime:
+    return datetime.utcnow() + timedelta(minutes=settings.VERIFICATION_TTL_MINUTES)
 
 
 def create_access_token(subject: str) -> str:

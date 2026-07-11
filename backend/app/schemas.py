@@ -19,6 +19,15 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class VerifyRequest(BaseModel):
+    email: EmailStr
+    code: str = Field(min_length=4, max_length=10)
+
+
+class ResendRequest(BaseModel):
+    email: EmailStr
+
+
 class UserOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -26,12 +35,22 @@ class UserOut(BaseModel):
     name: str
     email: EmailStr
     role: str
+    email_verified: bool
 
 
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserOut
+
+
+class RegisterResult(BaseModel):
+    """Registration no longer logs the user in — they must verify first."""
+    verification_required: bool = True
+    email: EmailStr
+    # Only populated when email sending is disabled (dev/local), so you can still
+    # complete the flow without a real inbox. Never returned when SMTP is on.
+    dev_code: str | None = None
 
 
 # --- Jobs --------------------------------------------------------------------
@@ -54,6 +73,7 @@ class JobUpdate(BaseModel):
     or adjust their own drop-off time."""
     status: str | None = None
     dropoff_at: datetime | None = None
+    pickup_eta: datetime | None = None
     string_preference: str | None = Field(default=None, max_length=200)
     tension: int | None = Field(default=None, **_TENSION)
     notes: str | None = None
@@ -69,6 +89,7 @@ class JobOut(BaseModel):
     notes: str | None
     status: str
     dropoff_at: datetime | None
+    pickup_eta: datetime | None
     created_at: datetime
     updated_at: datetime
     customer: UserOut
