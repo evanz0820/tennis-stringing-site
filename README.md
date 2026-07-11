@@ -58,6 +58,33 @@ alembic downgrade -1          # roll back one revision
 databases you can opt in by setting `CREATE_ALL_ON_STARTUP=true`, but production
 must rely on `alembic upgrade head`.
 
+### Using a free remote Postgres (Neon)
+
+No code changes needed — the app reads `DATABASE_URL` and normalizes it. To point
+it at a free [Neon](https://neon.tech) database:
+
+1. Sign up at neon.tech (free tier, no credit card) and **create a project**
+   (pick the region closest to you).
+2. In the project's **Connection Details**, copy the connection string. It looks
+   like `postgresql://user:pass@ep-xxxx.us-east-2.aws.neon.tech/neondb?sslmode=require`.
+   Keep the `?sslmode=require` — Neon requires SSL.
+3. Put it in `backend/.env`:
+   ```
+   DATABASE_URL=postgresql://user:pass@ep-xxxx.us-east-2.aws.neon.tech/neondb?sslmode=require
+   ```
+4. Create the schema and (optionally) seed it:
+   ```bash
+   source venv/bin/activate
+   alembic upgrade head
+   python -m app.seed
+   ```
+5. `uvicorn app.main:app --reload` — you're now on Neon.
+
+The Postgres driver (`psycopg2-binary`) is already installed, and the engine uses
+`pool_pre_ping` so idle serverless connections don't cause errors. If your libpq
+rejects the `channel_binding` parameter some strings include, just delete that
+one query param; `sslmode=require` is the part that matters.
+
 ### Tests
 
 ```bash
@@ -73,8 +100,12 @@ Tests use an isolated in-memory SQLite database and never touch `dev.db`.
 ```bash
 cd frontend
 npm install
-npm run dev        # http://localhost:5173, proxies /auth /jobs /info to :8000
+npm run dev        # http://localhost:5173, proxies /api/* to :8000 (prefix stripped)
 ```
+
+The frontend calls the API under `/api`. In dev, Vite proxies `/api/*` to the
+backend on `:8000` (stripping the `/api` prefix). In production, Vercel serves
+both from the same domain (see Deployment).
 
 Log in as a seeded user (password `password`):
 
@@ -109,3 +140,37 @@ boundaries. A `dropoff_at` is accepted only if it is in the future and lands on
 one of these boundaries; otherwise the API returns `422`. A null `dropoff_at`
 (flexible) is always allowed. This is input validation only — no capacity or
 booking is implied.
+
+## Deployment (Vercel — single project)
+
+Frontend (static React) and backend (FastAPI as Python serverless functions)
+deploy together as **one** Vercel project on the same domain, so there is no CORS
+and the frontend keeps calling `/api/*`. Config lives in:
+
+- `vercel.json` — routes `/api/*` to the Python function, everything else to the SPA.
+- `api/index.py` — serverless entrypoint; mounts the FastAPI app under `/api`.
+- `requirements.txt` (repo root) — runtime deps for the function.
+
+Steps:
+
+1. Push this repo to GitHub, then in Vercel **New Project → Import** it. Leave the
+   root directory as the repo root (Vercel reads `vercel.json`).
+2. Add **Environment Variables** in the Vercel project settings:
+   - `DATABASE_URL` — your Neon pooled connection string (`...-pooler...?sslmode=require`).
+   - `SECRET_KEY` — a long random string (do **not** ship the dev default).
+   - Optional: `TURNAROUND_NOTE`, `DROP_OFF_ADDRESS`, `OPEN_TIME`, `CLOSE_TIME`, `SLOT_MINUTES`.
+   - `CORS_ORIGINS` is not needed (same-origin), but harmless if set.
+3. **Run migrations yourself** against Neon (Vercel does not run them):
+   ```bash
+   cd backend && source venv/bin/activate
+   alembic upgrade head
+   python -m app.seed   # optional
+   ```
+4. Deploy. The app is served from your Vercel domain; the API is at `/api/*`.
+
+Notes:
+- Requests are stateless serverless invocations (cold starts possible); the app
+  needs no persistent server and uses polling, not websockets.
+- To run the backend somewhere persistent instead (Render/Railway/Fly), point the
+  frontend at it by setting `VITE_API_BASE` to the backend's URL at build time and
+  set `CORS_ORIGINS` on the backend to the frontend's origin.

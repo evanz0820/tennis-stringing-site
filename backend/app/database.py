@@ -22,7 +22,9 @@ DATABASE_URL = normalized_database_url(settings.DATABASE_URL)
 # check_same_thread is a SQLite-only flag; skip it for Postgres.
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
 
-engine = create_engine(DATABASE_URL, connect_args=connect_args)
+# pool_pre_ping avoids "server closed the connection unexpectedly" errors when a
+# remote/serverless Postgres (Neon, Supabase) drops idle connections.
+engine = create_engine(DATABASE_URL, connect_args=connect_args, pool_pre_ping=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 

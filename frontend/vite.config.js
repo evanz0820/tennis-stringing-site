@@ -7,10 +7,14 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
+    // Mirror production: the frontend calls /api/*; strip the prefix so the
+    // backend (which serves /auth, /jobs, /info, ...) matches in dev too.
     proxy: {
-      '/auth': 'http://localhost:8000',
-      '/jobs': 'http://localhost:8000',
-      '/info': 'http://localhost:8000',
+      '/api': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        rewrite: (p) => p.replace(/^\/api/, ''),
+      },
     },
   },
 })

@@ -1,0 +1,13 @@
+# Runtime deps for the Vercel Python serverless function (api/index.py).
+# Kept in sync with backend/requirements.txt but trimmed to what the running
+# API needs — no uvicorn/alembic/pytest (migrations are run locally against Neon,
+# and Vercel provides the server).
+fastapi==0.111.0
+sqlalchemy==2.0.30
+pydantic[email]==2.7.4
+pydantic-settings==2.3.4
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+bcrypt==4.0.1
+psycopg2-binary==2.9.9
+python-multipart==0.0.9

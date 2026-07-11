@@ -1,5 +1,10 @@
 // Thin fetch wrapper. Token is kept in localStorage and attached to requests.
 
+// All API calls are served under /api on the same origin (Vercel routes /api/*
+// to the FastAPI function; the Vite dev server proxies /api to :8000). Override
+// with VITE_API_BASE only if the backend lives on a different origin.
+const API_BASE = import.meta.env.VITE_API_BASE || '/api'
+
 const TOKEN_KEY = 'tss_token'
 const USER_KEY = 'tss_user'
 
@@ -26,7 +31,7 @@ async function request(path, { method = 'GET', body, auth = true } = {}) {
   const headers = { 'Content-Type': 'application/json' }
   if (auth && getToken()) headers.Authorization = `Bearer ${getToken()}`
 
-  const resp = await fetch(path, {
+  const resp = await fetch(API_BASE + path, {
     method,
     headers,
     body: body ? JSON.stringify(body) : undefined,
