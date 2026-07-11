@@ -147,14 +147,19 @@ Frontend (static React) and backend (FastAPI as Python serverless functions)
 deploy together as **one** Vercel project on the same domain, so there is no CORS
 and the frontend keeps calling `/api/*`. Config lives in:
 
-- `vercel.json` — routes `/api/*` to the Python function, everything else to the SPA.
-- `api/index.py` — serverless entrypoint; mounts the FastAPI app under `/api`.
+- `vercel.json` — builds the frontend (`buildCommand` → `outputDirectory`) and
+  rewrites `/api/*` to the Python function.
+- `api/index.py` — auto-detected serverless function; mounts the FastAPI app
+  under `/api` (so `/api/jobs` reaches the app as `/jobs`).
 - `requirements.txt` (repo root) — runtime deps for the function.
 
 Steps:
 
-1. Push this repo to GitHub, then in Vercel **New Project → Import** it. Leave the
-   root directory as the repo root (Vercel reads `vercel.json`).
+1. Push this repo to GitHub, then in Vercel **New Project → Import** it.
+   **Important:** the project's **Root Directory** (Settings → General) must be the
+   folder that contains `vercel.json`, `api/`, and `frontend/` — i.e. the repo
+   root, **not** `frontend`. If it's set to `frontend`, `vercel.json` and the API
+   are ignored and you get a 404.
 2. Add **Environment Variables** in the Vercel project settings:
    - `DATABASE_URL` — your Neon pooled connection string (`...-pooler...?sslmode=require`).
    - `SECRET_KEY` — a long random string (do **not** ship the dev default).
